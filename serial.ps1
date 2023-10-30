@@ -4,7 +4,32 @@ $port.PortName = "COMx"  # Az Arduino soros portjának megfelelő COM portot adj
 $port.BaudRate = 9600  # A Baud sebességet az Arduino kódban beállított sebességgel egyeztetheted
 $port.Open()  # Nyitjuk a soros portot
 
-# Az adatok fogadásához és küldéséhez használt függvények
+# Bemeneti adatok gyűjtésére használt változó
+$inputBuffer = ""
+
+# Folyamatosan figyeljük a bemenetet
+while ($true) {
+    # Ellenőrizzük a bemenetet
+    if ($Host.UI.RawUI.KeyAvailable) {
+        $key = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown").Character
+        if ($key -eq "`r") {
+            # Ha "Enter"-t nyomtál, elküldjük a bemeneti adatot és töröljük a buffer-t
+            Send-Data $inputBuffer
+            $inputBuffer = ""
+        } else {
+            # Az összes többi karaktert hozzáadjuk a bemeneti buffer-hez
+            $inputBuffer += $key
+        }
+    }
+
+    # Ellenőrizzük az adatok érkezését
+    Receive-Data
+}
+
+# Bezárjuk a soros portot, amikor kilépünk a ciklusból
+$port.Close()
+
+# Az adatok küldéséhez és fogadásához használt függvények
 function Receive-Data {
     if ($port.IsOpen) {
         $receivedData = $port.ReadLine()
@@ -22,24 +47,3 @@ function Send-Data($data) {
         Write-Host "Serial port is closed."
     }
 }
-
-# Folyamatosan figyeljük az adatokat és a bemenetet
-while ($true) {
-    # Ellenőrizzük az adatok érkezését
-    Receive-Data
-
-    # Ellenőrizzük a bemenetet
-    if ($Host.UI.RawUI.KeyAvailable) {
-        $key = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown").Character
-        if ($key -eq "q") {
-            # Kilépünk a ciklusból, ha "q" betűt ütünk be
-            break
-        } else {
-            # Küldünk adatot, ha más betűt ütünk be
-            Send-Data $key
-        }
-    }
-}
-
-# Bezárjuk a soros portot, amikor kilépünk a ciklusból
-$port.Close()
